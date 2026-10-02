@@ -1,0 +1,10 @@
+{
+<<<<<<< HEAD
+  "port": 8081,
+  "debug": false,
+  "env": "production"
+=======
+  "port": 9000,
+  "debug": false
+>>>>>>> 92244b2 (feat: change port)
+}

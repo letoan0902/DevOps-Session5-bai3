@@ -1,0 +1,9 @@
+{
+  "port": 9000,
+<<<<<<< HEAD
+  "debug": false,
+  "env": "production"
+=======
+  "debug": true
+>>>>>>> f2583be (feat: enable debug)
+}

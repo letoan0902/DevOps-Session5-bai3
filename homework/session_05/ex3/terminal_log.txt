@@ -1,0 +1,480 @@
+### Buoc 0: khoi tao repo demo
+
+$ git --version
+git version 2.49.0.windows.1
+
+$ mkdir -p rebase-conflict-demo && cd rebase-conflict-demo && git init -b main
+Initialized empty Git repository in D:/Rikkei/DevOps/Session5/_demo/bai3/rebase-conflict-demo/.git/
+
+$ git config user.name "Lê Toàn" && git config user.email "trinhhanh261293@gmail.com" && git config core.autocrlf false
+
+$ git config --local --list | grep -E "user|autocrlf"
+core.autocrlf=false
+user.name=Lê Toàn
+user.email=trinhhanh261293@gmail.com
+
+### Buoc 1: dung kich ban 5 commit
+
+$ printf "{\n  \"port\": 8080,\n  \"debug\": false\n}\n" > config.json && cat config.json
+{
+  "port": 8080,
+  "debug": false
+}
+
+$ git add config.json && git commit -m "init config"
+[main (root-commit) 6ab2977] init config
+ 1 file changed, 4 insertions(+)
+ create mode 100644 config.json
+
+$ git switch -c feature-api
+Switched to a new branch 'feature-api'
+
+$ printf "{\n  \"port\": 9000,\n  \"debug\": false\n}\n" > config.json && git diff
+diff --git a/config.json b/config.json
+index 838c88c..7388323 100644
+--- a/config.json
++++ b/config.json
+@@ -1,4 +1,4 @@
+ {
+-  "port": 8080,
++  "port": 9000,
+   "debug": false
+ }
+
+$ git commit -am "feat: change port"
+[feature-api 92244b2] feat: change port
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+$ printf "{\n  \"port\": 9000,\n  \"debug\": true\n}\n" > config.json && git diff
+diff --git a/config.json b/config.json
+index 7388323..d164232 100644
+--- a/config.json
++++ b/config.json
+@@ -1,4 +1,4 @@
+ {
+   "port": 9000,
+-  "debug": false
++  "debug": true
+ }
+
+$ git commit -am "feat: enable debug"
+[feature-api f2583be] feat: enable debug
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+$ git switch main
+Switched to branch 'main'
+
+$ printf "{\n  \"port\": 8081,\n  \"debug\": false\n}\n" > config.json && git diff
+diff --git a/config.json b/config.json
+index 838c88c..7da3458 100644
+--- a/config.json
++++ b/config.json
+@@ -1,4 +1,4 @@
+ {
+-  "port": 8080,
++  "port": 8081,
+   "debug": false
+ }
+
+$ git commit -am "update port on main"
+[main 759ffd1] update port on main
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+$ printf "{\n  \"port\": 8081,\n  \"debug\": false,\n  \"env\": \"production\"\n}\n" > config.json && git diff
+diff --git a/config.json b/config.json
+index 7da3458..410d8a0 100644
+--- a/config.json
++++ b/config.json
+@@ -1,4 +1,5 @@
+ {
+   "port": 8081,
+-  "debug": false
++  "debug": false,
++  "env": "production"
+ }
+
+$ git commit -am "add env config"
+[main 582a71f] add env config
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+### Buoc 2: trang thai truoc rebase
+
+$ git log --graph --oneline --all
+* f2583be feat: enable debug
+* 92244b2 feat: change port
+| * 582a71f add env config
+| * 759ffd1 update port on main
+|/  
+* 6ab2977 init config
+
+$ git merge-base main feature-api
+6ab297709cb9a3b603843671c985381e374adedd
+
+$ git log --oneline --no-walk=unsorted $(git merge-base main feature-api)
+6ab2977 init config
+
+$ git show main:config.json
+{
+  "port": 8081,
+  "debug": false,
+  "env": "production"
+}
+
+$ git show feature-api:config.json
+{
+  "port": 9000,
+  "debug": true
+}
+
+$ git status
+On branch main
+nothing to commit, working tree clean
+
+### Buoc 3: rebase - xung dot lan 1
+
+$ git switch feature-api
+Switched to branch 'feature-api'
+
+$ git rebase main
+Auto-merging config.json
+CONFLICT (content): Merge conflict in config.json
+Rebasing (1/2)error: could not apply 92244b2... feat: change port
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply 92244b2... feat: change port
+
+$ git status
+interactive rebase in progress; onto 582a71f
+Last command done (1 command done):
+   pick 92244b2 feat: change port
+Next command to do (1 remaining command):
+   pick f2583be feat: enable debug
+  (use "git rebase --edit-todo" to view and edit)
+You are currently rebasing branch 'feature-api' on '582a71f'.
+  (fix conflicts and then run "git rebase --continue")
+  (use "git rebase --skip" to skip this patch)
+  (use "git rebase --abort" to check out the original branch)
+
+Unmerged paths:
+  (use "git restore --staged <file>..." to unstage)
+  (use "git add <file>..." to mark resolution)
+	both modified:   config.json
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+$ cat config.json
+{
+<<<<<<< HEAD
+  "port": 8081,
+  "debug": false,
+  "env": "production"
+=======
+  "port": 9000,
+  "debug": false
+>>>>>>> 92244b2 (feat: change port)
+}
+
+$ git diff
+diff --cc config.json
+index 410d8a0,7388323..0000000
+--- a/config.json
++++ b/config.json
+@@@ -1,5 -1,4 +1,10 @@@
+  {
+++<<<<<<< HEAD
+ +  "port": 8081,
+ +  "debug": false,
+ +  "env": "production"
+++=======
++   "port": 9000,
++   "debug": false
+++>>>>>>> 92244b2 (feat: change port)
+  }
+
+$ git log --oneline --graph --all
+* f2583be feat: enable debug
+* 92244b2 feat: change port
+| * 582a71f add env config
+| * 759ffd1 update port on main
+|/  
+* 6ab2977 init config
+
+### Buoc 4: giai quyet chang 1
+
+$ printf "{\n  \"port\": 9000,\n  \"debug\": false,\n  \"env\": \"production\"\n}\n" > config.json && cat config.json
+{
+  "port": 9000,
+  "debug": false,
+  "env": "production"
+}
+
+$ grep -nE "^(<<<<<<<|=======|>>>>>>>)" config.json || echo "Khong con ky hieu xung dot"
+Khong con ky hieu xung dot
+
+$ python -m json.tool config.json
+{
+    "port": 9000,
+    "debug": false,
+    "env": "production"
+}
+
+$ git add config.json
+
+$ git status
+interactive rebase in progress; onto 582a71f
+Last command done (1 command done):
+   pick 92244b2 feat: change port
+Next command to do (1 remaining command):
+   pick f2583be feat: enable debug
+  (use "git rebase --edit-todo" to view and edit)
+You are currently rebasing branch 'feature-api' on '582a71f'.
+  (all conflicts fixed: run "git rebase --continue")
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	modified:   config.json
+
+
+$ GIT_EDITOR=true git rebase --continue
+[detached HEAD 96ebb77] feat: change port
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+Auto-merging config.json
+CONFLICT (content): Merge conflict in config.json
+Rebasing (2/2)error: could not apply f2583be... feat: enable debug
+hint: Resolve all conflicts manually, mark them as resolved with
+hint: "git add/rm <conflicted_files>", then run "git rebase --continue".
+hint: You can instead skip this commit: run "git rebase --skip".
+hint: To abort and get back to the state before "git rebase", run "git rebase --abort".
+hint: Disable this message with "git config set advice.mergeConflict false"
+Could not apply f2583be... feat: enable debug
+
+$ git status
+interactive rebase in progress; onto 582a71f
+Last commands done (2 commands done):
+   pick 92244b2 feat: change port
+   pick f2583be feat: enable debug
+No commands remaining.
+You are currently rebasing branch 'feature-api' on '582a71f'.
+  (fix conflicts and then run "git rebase --continue")
+  (use "git rebase --skip" to skip this patch)
+  (use "git rebase --abort" to check out the original branch)
+
+Unmerged paths:
+  (use "git restore --staged <file>..." to unstage)
+  (use "git add <file>..." to mark resolution)
+	both modified:   config.json
+
+no changes added to commit (use "git add" and/or "git commit -a")
+
+$ cat config.json
+{
+  "port": 9000,
+<<<<<<< HEAD
+  "debug": false,
+  "env": "production"
+=======
+  "debug": true
+>>>>>>> f2583be (feat: enable debug)
+}
+
+$ git diff
+diff --cc config.json
+index 0ca5390,d164232..0000000
+--- a/config.json
++++ b/config.json
+@@@ -1,5 -1,4 +1,9 @@@
+  {
+    "port": 9000,
+++<<<<<<< HEAD
+ +  "debug": false,
+ +  "env": "production"
+++=======
++   "debug": true
+++>>>>>>> f2583be (feat: enable debug)
+  }
+
+### Buoc 5: giai quyet chang 2
+
+$ printf "{\n  \"port\": 9000,\n  \"debug\": true,\n  \"env\": \"production\"\n}\n" > config.json && cat config.json
+{
+  "port": 9000,
+  "debug": true,
+  "env": "production"
+}
+
+$ grep -nE "^(<<<<<<<|=======|>>>>>>>)" config.json || echo "Khong con ky hieu xung dot"
+Khong con ky hieu xung dot
+
+$ python -m json.tool config.json
+{
+    "port": 9000,
+    "debug": true,
+    "env": "production"
+}
+
+$ git add config.json
+
+$ git status
+interactive rebase in progress; onto 582a71f
+Last commands done (2 commands done):
+   pick 92244b2 feat: change port
+   pick f2583be feat: enable debug
+No commands remaining.
+You are currently rebasing branch 'feature-api' on '582a71f'.
+  (all conflicts fixed: run "git rebase --continue")
+
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+	modified:   config.json
+
+
+$ GIT_EDITOR=true git rebase --continue
+[detached HEAD a2272bd] feat: enable debug
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+Successfully rebased and updated refs/heads/feature-api.
+
+### Buoc 6: kiem tra ket qua
+
+$ git status
+On branch feature-api
+nothing to commit, working tree clean
+
+$ git log --graph --oneline
+* a2272bd feat: enable debug
+* 96ebb77 feat: change port
+* 582a71f add env config
+* 759ffd1 update port on main
+* 6ab2977 init config
+
+$ git log --graph --oneline --all
+* a2272bd feat: enable debug
+* 96ebb77 feat: change port
+* 582a71f add env config
+* 759ffd1 update port on main
+* 6ab2977 init config
+
+$ git log --oneline --merges
+
+$ cat config.json
+{
+  "port": 9000,
+  "debug": true,
+  "env": "production"
+}
+
+$ python -m json.tool config.json
+{
+    "port": 9000,
+    "debug": true,
+    "env": "production"
+}
+
+$ git diff main feature-api
+diff --git a/config.json b/config.json
+index 410d8a0..ed51b27 100644
+--- a/config.json
++++ b/config.json
+@@ -1,5 +1,5 @@
+ {
+-  "port": 8081,
+-  "debug": false,
++  "port": 9000,
++  "debug": true,
+   "env": "production"
+ }
+
+$ git show --stat HEAD~1 HEAD
+commit 96ebb77dea252c1f8a08c8a84e820429df83e9e7
+Author: Lê Toàn <trinhhanh261293@gmail.com>
+Date:   Fri Oct 2 12:47:15 2026 +0700
+
+    feat: change port
+
+ config.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+commit a2272bd1d119b197ac3e5b8b9649b38ec092bf8c
+Author: Lê Toàn <trinhhanh261293@gmail.com>
+Date:   Fri Oct 2 12:47:15 2026 +0700
+
+    feat: enable debug
+
+ config.json | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+$ git reflog -n 8
+a2272bd HEAD@{0}: rebase (finish): returning to refs/heads/feature-api
+a2272bd HEAD@{1}: rebase (continue): feat: enable debug
+96ebb77 HEAD@{2}: rebase (continue): feat: change port
+582a71f HEAD@{3}: rebase (start): checkout main
+f2583be HEAD@{4}: checkout: moving from main to feature-api
+582a71f HEAD@{5}: commit: add env config
+759ffd1 HEAD@{6}: commit: update port on main
+6ab2977 HEAD@{7}: checkout: moving from feature-api to main
+
+$ git log --format="%h %p | %s" main..feature-api
+a2272bd 96ebb77 | feat: enable debug
+96ebb77 582a71f | feat: change port
+
+### Buoc 7: chung minh main khong bi pha, fast-forward
+
+$ git log --graph --oneline --decorate --all
+* a2272bd (HEAD -> feature-api) feat: enable debug
+* 96ebb77 feat: change port
+* 582a71f (main) add env config
+* 759ffd1 update port on main
+* 6ab2977 init config
+
+$ git log --oneline main
+582a71f add env config
+759ffd1 update port on main
+6ab2977 init config
+
+$ git show main:config.json
+{
+  "port": 8081,
+  "debug": false,
+  "env": "production"
+}
+
+$ git switch main
+Switched to branch 'main'
+
+$ git merge --ff-only feature-api
+Updating 582a71f..a2272bd
+Fast-forward
+ config.json | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+$ git log --graph --oneline --decorate
+* a2272bd (HEAD -> main, feature-api) feat: enable debug
+* 96ebb77 feat: change port
+* 582a71f add env config
+* 759ffd1 update port on main
+* 6ab2977 init config
+
+$ git log --oneline --merges
+
+$ git status
+On branch main
+nothing to commit, working tree clean
+
+$ git cat-file -p HEAD~1 | head -5
+tree 72c140e357da97b2dbefecedb8e7757ad584744e
+parent 582a71ff28e1b423d29371153f4f669db5a9be3d
+author Lê Toàn <trinhhanh261293@gmail.com> 1790920035 +0700
+committer Lê Toàn <trinhhanh261293@gmail.com> 1790920044 +0700
+
+
+### Buoc 8: bo sung (lenh rev-parse o Buoc 7 bao loi vi --short khong nhan nhieu doi so; chay lai dung cach)
+
+$ git rev-parse --short main && git rev-parse --short feature-api
+a2272bd
+a2272bd
+
+$ git log --format="%h %s | author: %ad | committer: %cd" --date=iso -n 2
+a2272bd feat: enable debug | author: 2026-10-02 12:47:15 +0700 | committer: 2026-10-02 12:47:34 +0700
+96ebb77 feat: change port | author: 2026-10-02 12:47:15 +0700 | committer: 2026-10-02 12:47:24 +0700
